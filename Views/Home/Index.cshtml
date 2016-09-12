@@ -1,0 +1,20 @@
+@model Kenpo.Models.HomeViewModels.IndexViewModel
+
+<h1>@Model.Header</h1>
+
+<ul>
+@foreach(var availability in Model.Availabilities)
+{
+    <li>
+        <a href="@availability.Url" target="_brank">@availability.Title</a>
+        <ul>
+            @foreach(var date in availability.Dates)
+            {
+                <li>
+                    <span class="@availability.ToClass(date)">@availability.ToString(date)</span>
+                </li>
+            }
+        </ul>
+    </li>
+}
+</ul>
