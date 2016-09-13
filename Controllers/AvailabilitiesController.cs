@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using HtmlAgilityPack;
 using Kenpo.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -13,10 +14,24 @@ namespace Kenpo.Controllers
 {
     public class AvailabilitiesController : Controller
     {
+        private readonly IMemoryCache _memoryCache;
+        public AvailabilitiesController(IMemoryCache memoryCache)
+        {
+            _memoryCache = memoryCache;
+        }
+
         // GET: /<controller>/
         [HttpGet]
         public async Task<IActionResult> Index()
         {
+            const string cacheKey = "Availabilities";
+
+            List<Availability> availabilities;
+            if(_memoryCache.TryGetValue(cacheKey, out availabilities))
+                return Json(availabilities);
+            else 
+                availabilities = new List<Availability>();
+            
             // service_category
             var rootUrl = new Uri("https://as.its-kenpo.or.jp/service_category/index");
             var serviceCategoryDom = await GetHtmlAsync(rootUrl);
@@ -36,7 +51,6 @@ namespace Kenpo.Controllers
                 .Select(x => new Uri(x));
             
             // service_apply
-            var availabilities = new List<Availability>();
             var serviceApplyDoms = await Task.WhenAll(serviceApplyUrls.Select(x => GetHtmlAsync(x)));
             foreach (var serviceApplyDom in serviceApplyDoms)
             {
@@ -71,6 +85,12 @@ namespace Kenpo.Controllers
                     availabilities.Add(availability);
                 }
             }
+            
+            // store in the cache from 1 minutes.
+            _memoryCache.Set(
+                cacheKey,
+                availabilities,
+                new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromMinutes(1)));
             
             return Json(availabilities.OrderBy(x => x.Title));
         }
