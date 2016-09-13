@@ -1,20 +1,92 @@
 @model Kenpo.Models.HomeViewModels.IndexViewModel
 
-<h1>@Model.Header</h1>
-
-<ul>
-@foreach(var availability in Model.Availabilities)
-{
-    <li>
-        <a href="@availability.Url" target="_brank">@availability.Title</a>
-        <ul>
-            @foreach(var date in availability.Dates)
-            {
-                <li>
-                    <span class="@availability.ToClass(date)">@availability.ToString(date)</span>
-                </li>
-            }
-        </ul>
-    </li>
+@section styles {
+    <style>
+    #loader-bg {
+        display: none;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        top: 0px;
+        left: 0px;
+        background: #000;
+        z-index: 1;
+    }
+    #loader {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        width: 200px;
+        height: 200px;
+        margin-top: -100px;
+        margin-left: -100px;
+        text-align: center;
+        color: #fff;
+        z-index: 2;
+    }
+    </style>
 }
-</ul>
+
+<div id="loader-bg">
+  <div id="loader">
+    <img src="~/images/img-loading.gif" width="80" height="80" alt="Now Loading..." />
+    <p>Now Loading...</p>
+  </div>
+</div>
+<div id="wrap">
+    <h1>@Model.Header</h1>
+    <ul id="availabilities"></ul>
+</div>
+
+@section scripts {
+    <script>
+        var url = "@Url.Action("Index", "Availabilities")"; 
+        $.ajax({
+            url: url,
+            success: function(availabilities) {
+                var $ul = $("#availabilities");
+                for (var i = 0; i < availabilities.length; i++) {
+                    var availability = availabilities[i];
+                    var $li = $("<li>");
+                    var $a = $("<a>");
+                    $a.attr("href", availability.url);
+                    $a.attr("target", "_blank");
+                    $a.text(availability.title);
+                    $li.append($a);
+                    $innerUl = $("<ul>");
+                    for (var j = 0; j < availability.dates.length; j++) {
+                        var date = availability.dates[j];
+                        var $innerli = $("<li>");
+                        var $innerspan = $("<span>");
+                        if (date.className) {
+                            $innerspan.attr("class", date.className);
+                        }
+                        $innerspan.text(date.text);
+                        $innerli.append($innerspan);
+                        $innerUl.append($innerli);
+                    }
+                    $li.append($innerUl);
+                    $ul.append($li);
+                }
+                stopload();
+            },
+            error: function() {
+                alrt("読み込みに失敗しました。リロードしてください。");
+                location.reload();
+            }
+        });
+
+    $(function() {
+        var h = $(window).height();
+        $('#wrap').css('display','none');
+        $('#loader-bg ,#loader').height(h).css('display','block');
+    });
+    
+    function stopload(){
+        $('#wrap').css('display','block');
+        $('#loader-bg').delay(900).fadeOut(800);
+        $('#loader').delay(600).fadeOut(300);
+    }
+    </script>
+}
