@@ -13,8 +13,6 @@ namespace Kenpo.Controllers
 
         public IActionResult About()
         {
-            ViewData["Message"] = "このサイトはIT健保の保養所の空き日を検索するためのサイトです。";
-
             return View();
         }
 

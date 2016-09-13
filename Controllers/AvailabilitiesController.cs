@@ -72,7 +72,7 @@ namespace Kenpo.Controllers
                 }
             }
             
-            return Json(availabilities);
+            return Json(availabilities.OrderBy(x => x.Title));
         }
 
         private async Task<HtmlDocument> GetHtmlAsync(Uri url)
