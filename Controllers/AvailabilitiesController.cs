@@ -14,31 +14,17 @@ namespace Kenpo.Controllers
 {
     public class AvailabilitiesController : Controller
     {
-        private readonly IMemoryCache _memoryCache;
-        public AvailabilitiesController(IMemoryCache memoryCache)
-        {
-            _memoryCache = memoryCache;
-        }
+        private readonly static Uri RootUrl = new Uri("https://as.its-kenpo.or.jp/service_category/index");
 
-        // GET: /<controller>/
-        [HttpGet]
+        [HttpGet, Route("api/service_groups")]
         public async Task<IActionResult> Index()
         {
-            const string cacheKey = "Availabilities";
-
-            List<Availability> availabilities;
-            if(_memoryCache.TryGetValue(cacheKey, out availabilities))
-                return Json(availabilities);
-            else 
-                availabilities = new List<Availability>();
-            
             // service_category
-            var rootUrl = new Uri("https://as.its-kenpo.or.jp/service_category/index");
-            var serviceCategoryDom = await GetHtmlAsync(rootUrl);
+            var serviceCategoryDom = await GetHtmlAsync(RootUrl);
             var serviceGroupUrl = serviceCategoryDom.DocumentNode.SelectNodes("//a")
                 .Where(x => x.InnerText == "直営・通年・夏季保養施設(空き照会)")
                 .Select(x => x.Attributes["href"].Value)
-                .Select(x => $"{rootUrl.Scheme}://{rootUrl.Host}" + x)
+                .Select(x => $"{RootUrl.Scheme}://{RootUrl.Host}" + x)
                 .Select(x => new Uri(x))
                 .First();
 
@@ -47,50 +33,49 @@ namespace Kenpo.Controllers
             var serviceApplyUrls = serviceGroupDom.DocumentNode.SelectNodes("//li")
                 .SelectMany(x => x.Descendants("a"))
                 .Select(x => x.Attributes["href"].Value)
-                .Select(x => $"{rootUrl.Scheme}://{rootUrl.Host}" + x)
-                .Select(x => new Uri(x));
+                .Select(x => $"{RootUrl.Scheme}://{RootUrl.Host}" + x);
+
+            return Json(serviceApplyUrls);
+        }
+
+        // GET: /<controller>/
+        [HttpGet, Route("api/service_apply")]
+        public async Task<IActionResult> Index(string url)
+        {
+            var availabilities = new List<Availability>();
             
             // service_apply
-            var serviceApplyDoms = await Task.WhenAll(serviceApplyUrls.Select(x => GetHtmlAsync(x)));
-            foreach (var serviceApplyDom in serviceApplyDoms)
+            var serviceApplyDom = await GetHtmlAsync(new Uri(url));
+            var applyUrls = serviceApplyDom.DocumentNode.SelectNodes("//li")
+                .SelectMany(x => x.Descendants("a"))
+                .Select(x => x.Attributes["href"].Value)
+                .Select(x => $"{RootUrl.Scheme}://{RootUrl.Host}" + x)
+                .Select(x => new Uri(x));
+                
+            // apply
+            var applyDoms = await Task.WhenAll(applyUrls.Select(async x => new { Url = x, Dom = await GetHtmlAsync(x)}));
+            foreach (var applyDom in applyDoms)
             {
-                var applyUrls = serviceApplyDom.DocumentNode.SelectNodes("//li")
-                    .SelectMany(x => x.Descendants("a"))
-                    .Select(x => x.Attributes["href"].Value)
-                    .Select(x => $"{rootUrl.Scheme}://{rootUrl.Host}" + x)
-                    .Select(x => new Uri(x));
-                    
-                // apply
-                var applyDoms = await Task.WhenAll(applyUrls.Select(async x => new { Url = x, Dom = await GetHtmlAsync(x)}));
-                foreach (var applyDom in applyDoms)
-                {
-                    var title = applyDom.Dom.DocumentNode.SelectNodes("//table")
-                        .Where(x => x.Attributes["class"] != null)
-                        .Where(x => x.Attributes["class"].Value == "tform_new")
-                        .Select(x => x.Descendants("tr").First())
-                        .Select(x => x.Descendants("td").Last().InnerText)
-                        .First();
-                    var dates = applyDom.Dom.DocumentNode.SelectNodes("//select")
-                        .Where(x => x.Attributes["id"] != null)
-                        .Where(x => x.Attributes["id"].Value == "apply_join_time")
-                        .SelectMany(x => x.Descendants("option"))
-                        .Select(x => x.Attributes["value"].Value)
-                        .Where(x => !string.IsNullOrEmpty(x))
-                        .Select(x => new AvailabilityDateTime(Convert.ToDateTime(x)));
+                var title = applyDom.Dom.DocumentNode.SelectNodes("//table")
+                    .Where(x => x.Attributes["class"] != null)
+                    .Where(x => x.Attributes["class"].Value == "tform_new")
+                    .Select(x => x.Descendants("tr").First())
+                    .Select(x => x.Descendants("td").Last().InnerText)
+                    .First();
+                var dates = applyDom.Dom.DocumentNode.SelectNodes("//select")
+                    .Where(x => x.Attributes["id"] != null)
+                    .Where(x => x.Attributes["id"].Value == "apply_join_time")
+                    .SelectMany(x => x.Descendants("option"))
+                    .Select(x => x.Attributes["value"].Value)
+                    .Where(x => !string.IsNullOrEmpty(x))
+                    .Select(x => new AvailabilityDateTime(Convert.ToDateTime(x)));
 
-                    var availability = new Availability();
-                    availability.Title = title;
-                    availability.Url = applyDom.Url;
-                    availability.Dates = dates;
-                    availabilities.Add(availability);
-                }
+                var availability = new Availability();
+                availability.Title = title;
+                availability.Url = applyDom.Url;
+                availability.Dates = dates;
+                availabilities.Add(availability);
             }
-            
-            // store in the cache from 1 minutes.
-            _memoryCache.Set(
-                cacheKey,
-                availabilities,
-                new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromMinutes(1)));
             
             return Json(availabilities.OrderBy(x => x.Title));
         }

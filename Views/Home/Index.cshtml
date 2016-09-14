@@ -1,7 +1,6 @@
 @model Kenpo.Models.HomeViewModels.IndexViewModel
 
 @section styles {
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.12/css/jquery.dataTables.min.css"/>
     <style>
     #loader-bg {
         display: none;
@@ -35,9 +34,9 @@
     <p>Now Loading...</p>
   </div>
 </div>
-<div id="wrap">
+<div id="wrap" class="table-responsive">
     <h1>@Model.Header</h1>
-    <table id="availabilities" class="stripe">
+    <table id="availabilities" class="table table-condensed table-striped">
         <thead>
         <tr>
             <th>申込対象サービス</th>
@@ -50,41 +49,47 @@
 </div>
 
 @section scripts {
-    <script src="https://cdn.datatables.net/1.10.12/js/jquery.dataTables.min.js"></script>
     <script>
-        var url = "@Url.Action("Index", "Availabilities")"; 
+        var url = "/api/service_groups"; 
         $.ajax({
             url: url,
-            success: function(availabilities) {
+            success: function(urls) {
                 var $table = $("#availabilities");
-                for (var i = 0; i < availabilities.length; i++) {
-                    var availability = availabilities[i];
-                    var $tr = $("<tr>");
-                    var $td1 = $("<td>");
-                    var $td2 = $("<td>");
-                    var $a = $("<a>");
-                    $a.attr("href", availability.url);
-                    $a.attr("target", "_blank");
-                    $a.text(availability.title);
-                    $td1.append($a);
-                    $tr.append($td1);
-                    $innerUl = $("<ul>");
-                    for (var j = 0; j < availability.dates.length; j++) {
-                        var date = availability.dates[j];
-                        var $innerli = $("<li>");
-                        var $innerspan = $("<span>");
-                        if (date.className) {
-                            $innerspan.attr("class", date.className);
+                for (var i = 0; i < urls.length; i++) {
+                    var url = "/api/service_apply?url=" + urls[i];
+                    $.ajax({
+                        url: url,
+                        success: function(availabilities) {
+                            for (var j = 0; j < availabilities.length; j++) {
+                                var availability = availabilities[j];
+                                var $tr = $("<tr>");
+                                var $td1 = $("<td>");
+                                var $td2 = $("<td>");
+                                var $a = $("<a>");
+                                $a.attr("href", availability.url);
+                                $a.attr("target", "_blank");
+                                $a.text(availability.title);
+                                $td1.append($a);
+                                $tr.append($td1);
+                                $innerUl = $("<ul>");
+                                for (var k = 0; k < availability.dates.length; k++) {
+                                    var date = availability.dates[k];
+                                    var $innerli = $("<li>");
+                                    var $innerspan = $("<span>");
+                                    if (date.className) {
+                                        $innerspan.attr("class", date.className);
+                                    }
+                                    $innerspan.text(date.text);
+                                    $innerli.append($innerspan);
+                                    $innerUl.append($innerli);
+                                }
+                                $td2.append($innerUl);
+                                $tr.append($td2);
+                                $table.append($tr);
+                            }
                         }
-                        $innerspan.text(date.text);
-                        $innerli.append($innerspan);
-                        $innerUl.append($innerli);
-                    }
-                    $td2.append($innerUl);
-                    $tr.append($td2);
-                    $table.append($tr);
+                    });   
                 }
-                $table.dataTable();
                 stopload();
             },
             error: function() {
