@@ -1,6 +1,7 @@
 @model Kenpo.Models.HomeViewModels.IndexViewModel
 
 @section styles {
+    <link rel="stylesheet" href="~/css/calendar.min.css">
     <style>
     #loader-bg {
         display: none;
@@ -36,80 +37,80 @@
 </div>
 <div id="wrap">
     <h1>@Model.Header</h1>
-    <div class="table-responsive">
-        <table id="availabilities" class="table table-condensed table-striped">
-            <thead>
-            <tr>
-                <th>申込対象サービス</th>
-                <th>空日一覧</th>
-            </tr>
-            </thead>
-            <tbody>
-            </tbody>
-        </table>
-    </div>
+    <div class="page-header">
+		<div class="pull-right form-inline">
+			<div class="btn-group">
+				<button class="btn btn-primary" data-calendar-nav="prev">&lt;&lt; Prev</button>
+				<button class="btn btn-default" data-calendar-nav="today">Today</button>
+				<button class="btn btn-primary" data-calendar-nav="next">Next &gt;&gt;</button>
+			</div>
+		</div>
+		<h3>March 2013</h3>
+	</div>
+    <div id="calendar"></div>
 </div>
 
 @section scripts {
+    <script type="text/javascript" src="~/js/vendor/underscore.min.js"></script>
+    <script type="text/javascript" src="~/js/language/ja-JP.min.js"></script>
+    <script type="text/javascript" src="~/js/calendar.min.js"></script>
     <script>
-        var url = "/api/service_groups"; 
-        $.ajax({
-            url: url,
-            success: function(urls) {
-                var $table = $("#availabilities");
-                for (var i = 0; i < urls.length; i++) {
-                    var url = "/api/service_apply?url=" + urls[i];
-                    $.ajax({
-                        url: url,
-                        success: function(availabilities) {
-                            for (var j = 0; j < availabilities.length; j++) {
-                                var availability = availabilities[j];
-                                var $tr = $("<tr>");
-                                var $td1 = $("<td>");
-                                var $td2 = $("<td>");
-                                var $a = $("<a>");
-                                $a.attr("href", availability.url);
-                                $a.attr("target", "_blank");
-                                $a.text(availability.title);
-                                $td1.append($a);
-                                $tr.append($td1);
-                                $innerUl = $("<ul>");
-                                for (var k = 0; k < availability.dates.length; k++) {
-                                    var date = availability.dates[k];
-                                    var $innerli = $("<li>");
-                                    var $innerspan = $("<span>");
-                                    if (date.className) {
-                                        $innerspan.attr("class", date.className);
-                                    }
-                                    $innerspan.text(date.text);
-                                    $innerli.append($innerspan);
-                                    $innerUl.append($innerli);
-                                }
-                                $td2.append($innerUl);
-                                $tr.append($td2);
-                                $table.append($tr);
-                            }
-                        }
-                    });   
-                }
-                stopload();
-            },
-            error: function() {
-                alrt("読み込みに失敗しました。リロードしてください。");
-                location.reload();
-            }
-        });
+        $(function() {
+            var h = $(window).height();
+            $('#wrap').css('display','none');
+            $('#loader-bg ,#loader').height(h).css('display','block');
 
-    $(function() {
-        var h = $(window).height();
-        $('#wrap').css('display','none');
-        $('#loader-bg ,#loader').height(h).css('display','block');
-    });
-    
-    function stopload(){
-        $('#wrap').css('display','block');
-        $('#loader-bg').delay(900).fadeOut(800);
-        $('#loader').delay(600).fadeOut(300);
-    }
+            var calendar = $("#calendar").calendar(
+                {
+                    language: "ja-JP",
+                    tmpl_path: "/tmpls/",
+                    weekbox: false,
+                    events_source: [],
+                    first_day: 1,
+                    views: {
+                        day: { enable: false },
+                        month: { enable: true }
+                    },
+                    onAfterViewLoad: function(view) {
+                        $('.page-header h3').text(this.getTitle());
+                        $('.btn-group button').removeClass('active');
+                        $('button[data-calendar-view="' + view + '"]').addClass('active');
+                    }
+                });
+            
+            $.ajax({
+                url: "/api/calendar/urls",
+                success: function(urls){
+                    stopload();
+                    for(let i = 0; i < urls.length; i++) {
+                        var url = urls[i];
+                        $.ajax({
+                            url: "api/calendar/events?url=" + url,
+                            success: function(response) {
+                                for(let j = 0; j < response.result.length; j++) {
+                                    var event = response.result[j];
+                                    calendar.options.events_source.push(event);
+                                }
+                                calendar.view();
+                            }
+                        });
+                    }
+                }
+            });
+
+            $('.btn-group button[data-calendar-nav]').each(function() {
+                var $this = $(this);
+                $this.click(function() {
+                    calendar.navigate($this.data('calendar-nav'));
+                });
+            });
+        });
+        
+        
+        function stopload() {
+            $('#wrap').css('display','block');
+            $('#loader-bg').delay(900).fadeOut(800);
+            $('#loader').delay(600).fadeOut(300);
+        };
     </script>
 }
