@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using HtmlAgilityPack;
 using Kenpo.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Caching.Memory;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
