@@ -14,6 +14,7 @@ namespace Kenpo.Models
         }
 
         public Uri Url {get;}
+
         public IEnumerable<Apply> Applies {get; private set;}
 
         public async Task<ServiceApply> LoadAsync()

@@ -8,11 +8,7 @@ namespace Kenpo.Models
 {
     public class ServiceCategory
     {
-        private readonly static Uri RootUrl = new Uri("https://as.its-kenpo.or.jp/service_category/index");
-
-        public ServiceCategory()
-        {
-        }
+        private static readonly Uri RootUrl = new Uri("https://as.its-kenpo.or.jp/service_category/index");
 
         public ServiceGroup ServiceGroup {get; private set;}
 

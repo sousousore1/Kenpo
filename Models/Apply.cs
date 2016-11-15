@@ -33,7 +33,7 @@ namespace Kenpo.Models
                 .SelectMany(x => x.Descendants("option"))
                 .Select(x => x.Attributes["value"].Value)
                 .Where(x => !string.IsNullOrEmpty(x))
-                .Select(x => Convert.ToDateTime(x))
+                .Select(Convert.ToDateTime)
                 .ToArray();
             return this;
         }

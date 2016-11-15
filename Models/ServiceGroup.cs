@@ -12,7 +12,9 @@ namespace Kenpo.Models
         {
             Url = url;
         }
+
         public Uri Url {get;}
+
         public IEnumerable<ServiceApply> ServiceApplies {get; private set;}
 
         public async Task<ServiceGroup> LoadAsync()
